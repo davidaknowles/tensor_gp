@@ -1,10 +1,10 @@
 require(data.table)
 
-test=fread("../Drug_synergy_data/ch1_LB.csv")
-setDF(test)
-
-train=fread("../Drug_synergy_data/ch1_train_combination_and_monoTherapy.csv")
+train=fread("Drug_synergy_data/ch1_train_combination_and_monoTherapy.csv")
 setDF(train)
+
+test=fread("Drug_synergy_data/ch1_LB.csv")
+setDF(test)
 
 # check for overlaps between train and test
 # sum( duplicated( train[,c("CELL_LINE","COMPOUND_A","COMPOUND_B")] ) )

@@ -1,6 +1,6 @@
 # --------GENE EXPRESSION -----------
 require(data.table)
-a=fread("../Sanger_molecular_data/gex.csv")
+a=fread("Sanger_molecular_data/gex.csv")
 setDF(a)
 rownames(a)=a$V1
 a$V1=NULL
@@ -8,7 +8,7 @@ hist(as.numeric(as.matrix(a)))
 s=apply(a,1,sd)
 hist(s)
 
-b=fread("../Sanger_molecular_data/cell_info.csv")
+b=fread("Sanger_molecular_data/cell_info.csv")
 setDF(b)
 rownames(b)=b$Sanger.Name
 
@@ -22,7 +22,7 @@ ccle$Description=NULL
 ccle=as.matrix(ccle)
 rownames(ccle)=gn
 
-ccle_cell_lines=as.character(read.table("~/Dropbox/ccle_data/cl_names.txt")$V1)
+#ccle_cell_lines=as.character(read.table("~/Dropbox/ccle_data/cl_names.txt")$V1)
 missingCL=b[ setdiff( b$Sanger.Name, colnames(a)  ) , "CCLE.Name" ]
 missingCL %in% colnames(ccle)
 
@@ -32,19 +32,15 @@ sangerMissing=matrix(NA, nrow(sanger), length(missingCL), dimnames = list(rownam
 commonGenes=intersect( rownames(sanger), rownames(ccle) )
 commonCL=intersect(colnames(sanger),colnames(ccle))
 
-#cors=numeric(length(commonGenes))
-#names(cors)=commonGenes
-preds=foreach (g=commonGenes) %dopar% {
+preds=foreach (g=commonGenes, .combine = rbind) %dopar% {
   geC=ccle[g,commonCL]
   geS=sanger[g,commonCL]
   l=lm(geS ~ geC)
-  #cors[g]=cor(geS , geC)
   predict(l, newdata=data.frame( geC=ccle[g,missingCL] ))
 }
-preds=do.call(rbind,preds)
 rownames(preds)=commonGenes
 
-cors=foreach (g=commonGenes) %dopar% {
+cors=foreach (g=commonGenes, .combine = c) %dopar% {
   geC=ccle[g,commonCL]
   geS=sanger[g,commonCL]
   cor(geS , geC)
@@ -68,7 +64,7 @@ write.csv( d, file="processed_data/gex_scaled_dist.csv", quote=F )
 
 rownames(b)=make.unique(b$CCLE.Name)
 colnames(sangerAllImp)=c(colnames(a),b[missingCL,"Sanger.Name"])
-write.csv( sangerAllImp, file="gex_imputed_with_ccle.csv", quote=F )
+write.csv( sangerAllImp, file="processed_data/gex_imputed_with_ccle.csv", quote=F )
 
 #b$Sanger.Name==colnames(d) # not true, GE for two cell lines is missing
 
@@ -78,7 +74,7 @@ dimnames(d)=list(tissues,tissues)
 # TODO: impute or find missing GE
 
 #------------------ MUTATIONS ---------------------
-a=fread("../Sanger_molecular_data/mutations.csv")
+a=fread("Sanger_molecular_data/mutations.csv")
 setDF(a)
 
 pdf("mut_counts.pdf",height=12,width=8)
@@ -91,8 +87,8 @@ require(Matrix)
 sm=sparseMatrix(i=as.numeric(a$cell_line_name), j=as.numeric(a$Gene.name), x=rep(1,nrow(a)), dimnames = list(levels(a$cell_line_name),levels(a$Gene.name)))
 d=as.matrix(dist(sm))
 
-
 smbin=sm>0
+require(prabclus)
 jd=1-jaccard(smbin)
 dimnames(jd)=list(rownames(sm),rownames(sm))
 write.csv( as.matrix(jd),file="mut_dist.csv", quote=F)
@@ -103,9 +99,8 @@ pdf("mut_hclust_jacc.pdf",width=15,height=8); plot( hclust( as.dist( jd ) ) ); d
 #dimnames(d)=list(tissues,tissues)
 #pdf("mut_hclust.pdf",width=15,height=8); plot( hclust( as.dist( d ) ) ); dev.off(); 
 
-
 #----------------- CNV ---------------------
-a=fread("../Sanger_molecular_data/cnv/cnv_gene.csv")
+a=fread("Sanger_molecular_data/cnv/cnv_gene.csv")
 setDF(a)
 #qplot(a$min_cn,a$max_cn) + stat_binhex()
 require(reshape2)
@@ -128,7 +123,7 @@ dimnames(cnvdist)=list(tissues,tissues)
 pdf("cnv_hclust.pdf",width=15,height=8); plot( hclust( as.dist( cnvdist ) ) ); dev.off(); 
 
 #----------------- MEHTYL ---------------------
-a=fread("../Sanger_molecular_data/methyl/CpG_probe_level/methyl_probe_beta.csv")
+a=fread("Sanger_molecular_data/methyl/CpG_probe_level/methyl_probe_beta.csv")
 setDF(a)
 rownames(a)=a$V1
 a$V1=NULL
@@ -136,7 +131,7 @@ a=as.matrix(a)
 
 missingCL=setdiff(b$Sanger.Name,colnames(a))
 
-ge=fread("../code/processed_data/gex_imputed_with_ccle.csv")
+ge=fread("processed_data/gex_imputed_with_ccle.csv")
 setDF(ge)
 rownames(ge)=ge$V1
 ge$V1=NULL

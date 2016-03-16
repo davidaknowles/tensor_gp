@@ -29,7 +29,7 @@ top_two_pcs=irlba(co,2,2)
 plot(top_two_pcs$v[,1], top_two_pcs$v[,2], col="white", xlab="PC 1", ylab="PC 2")
 text(top_two_pcs$v[,1], top_two_pcs$v[,2], colnames(co))
 
-write.table(co,"pca_imputed_mono.txt",quote=F)
+#write.table(co,"pca_imputed_mono.txt",quote=F)
 
 mono_dist=as.matrix(dist(t(co)))
 mono_dist=mono_dist/median(mono_dist[upper.tri(mono_dist)])

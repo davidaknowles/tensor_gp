@@ -21,16 +21,3 @@ train=cellDrugFactor(train)
 test=cellDrugFactor(test)
 
 rmseOnTest=function(g) sqrt(mean( (test$SYNERGY_SCORE-g)^2 ))
-
-views=c("cnv", "gex", "mut", "methyl")
-dist=foreach(view=views) %do% {
-  a=read.csv(paste0("processed_data/",view,"_dist.csv"),row.names=1,check.names=F)
-  a=a/median(a[upper.tri(a)])
-  as.matrix(a)
-}
-names(dist)=views
-dist=lapply(dist, function(g) g[rownames(dist$gex),colnames(dist$gex)])
-
-ge=read.csv("processed_data/gex_imputed_with_ccle.csv", check.names = F)
-rownames(ge)=ge[,1]
-ge[,1]=NULL

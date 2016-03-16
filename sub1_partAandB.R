@@ -2,13 +2,23 @@ require(rstan)
 require(doMC)
 registerDoMC(10)
 
-sub_challenge=commandArgs(trailingOnly = T)[1]
+run=as.logical(as.numeric(commandArgs(trailingOnly = T)[1]))
 
-source("load_data.R")
-#source("load_sub1_data.R")
-source("load_sub1final_data.R")
+setup=commandArgs(trailingOnly = T)[2]
 
-sm=stan_model("comb_therapy_models/gp_multitask_mkl.stan")
+sub_challenge=commandArgs(trailingOnly = T)[3]
+
+source("load_cell_line_data.R")
+source("load_sub1_data.R")
+
+dat=switch(setup, 
+  lb=load_data( "ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"), 
+  lb2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),"ch1_LB.csv"), 
+  final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv")
+)
+
+train=dat$train
+test=dat$test
 
 cls=levels(train$CELL_LINE)
 
@@ -44,13 +54,18 @@ if (sub_challenge=="A") {
 
 dat=list(N=nrow(train), Ntest=nrow(test), y=train$SYNERGY_SCORE, C=length(cls), D=length(levels(train$COMPOUND_A)), P=length(sqDist), sqDist_cl=sqDist, P_dr=length(sqDist_dr), sqDist_dr=sqDist_dr, cellLines=as.numeric(train$CELL_LINE), cellLinesTest=as.numeric(test$CELL_LINE), drugA=as.numeric(train$COMPOUND_A), drugB=as.numeric(train$COMPOUND_B), drugATest=as.numeric(test$COMPOUND_A), drugBTest=as.numeric(test$COMPOUND_B) )
 
-reruns = foreach(i=1:10) %dopar% { 
-  set.seed(i)
-  optimizing(sm, data=dat,verbose=T,as_vector=F) 
+if (run) {
+  sm=stan_model("comb_therapy_models/gp_multitask_mkl.stan")
+  reruns = foreach(i=1:10) %dopar% { 
+    set.seed(i)
+    optimizing(sm, data=dat,verbose=T,as_vector=F) 
+  }
+  save(reruns, file="cached_results/sub1_part",sub_challenge,"_",setup,".RData")
+  cat("Done!")
+  stop()
+} else {
+  load(paste0("cached_results/sub1_part",sub_challenge,"_final.RData"))
 }
-save(reruns, file="sub1_part",sub_challenge,"_final.RData")
-cat("Done!")
-stop()
 
 likelihoods=foreach(r=reruns, .combine = c) %do% r$value
 barplot(-likelihoods)
@@ -59,14 +74,13 @@ o=reruns[[ which.max(likelihoods) ]]
 
 # o$value
 require(gridExtra)
-do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% {
-  ggplot(data.frame(x=names(sqDist), y=sqrt(r$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=1))
+do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=names(sqDist), y=sqrt(r$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
 
-names(o$par$eta_sq_cl)=names(sqDist)
-barplot(sqrt(o$par$eta_sq_cl),ylab="importance")
+ggplot(data.frame(x=names(sqDist), y=sqrt(o$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") + ylim(0,2.3)
 
-names(o$par$eta_sq_dr)=c("pathways","mono_therapy")
-barplot(sqrt(o$par$eta_sq_dr),ylab="importance")
+do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(o$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
+
+ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(o$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") + ylim(0,2.3)
 
 N=nrow(train)
 o$par$sigma_sq
@@ -93,7 +107,7 @@ ggplot(b, aes(x=COMBINATION_ID, y=cv) ) + geom_bar(stat = "identity")+coord_flip
 str(o)
 sub1=data.frame(CELL_LINE=test$CELL_LINE, COMBINATION_ID=test$COMBINATION_ID, PREDICTION=o$par$ytest)
 
-resdir="sub1_partA_final"
+resdir=paste0("sub1_part",sub_challenge,"_final")
 dir.create(resdir)
 setwd(resdir)
 write.csv(sub1,file="prediction.csv",row.names = F, quote=F)
@@ -101,5 +115,6 @@ write.csv(sub1,file="prediction.csv",row.names = F, quote=F)
 sub1conf=data.frame(COMBINATION_ID=a$COMBINATION_ID, CONFIDENCE=1-pnorm( -abs(a$mean) / sqrt(a$err) )*2 )
 write.csv(sub1conf,file="combination_priority.csv",row.names = F, quote=F)
 
-system("zip sub1a.zip *.csv")
+system(paste0("zip sub1",sub_challenge,".zip *.csv"))
 setwd("..")
+

@@ -1,11 +1,10 @@
-require(dplyr)
-require(Matrix)
+
 require(dplyr)
 require(Matrix)
 source("convex_pca.R")
 
-drug_dir="../Drug_synergy_data/"
-all_mono=do.call(rbind,foreach (f=list.files(drug_dir,"_monoTherapy.csv")) %do% getMono(read.csv(paste0(drug_dir,f),stringsAsFactors = F)))
+drug_dir="Drug_synergy_data/"
+all_mono=foreach (f=list.files(drug_dir,"_monoTherapy.csv"), .combine = rbind) %do% getMono(read.csv(paste0(drug_dir,f),stringsAsFactors = F))
 
 all_mono=all_mono[!duplicated(all_mono),]
 

@@ -1,7 +1,7 @@
 require(rstan)
 require(doMC)
 require(sna)
-source("load_data.R")
+source("load_cell_data.R")
 source("load_sub2_data.R")
 
 sm=stan_model("comb_therapy_models/gp_multitask_mkl.stan")

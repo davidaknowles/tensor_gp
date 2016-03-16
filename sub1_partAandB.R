@@ -60,7 +60,7 @@ if (run) {
     set.seed(i)
     optimizing(sm, data=dat,verbose=T,as_vector=F) 
   }
-  save(reruns, file="cached_results/sub1_part",sub_challenge,"_",setup,".RData")
+  save(reruns, file=paste0("cached_results/sub1_part",sub_challenge,"_",setup,".RData"))
   cat("Done!")
   stop()
 } else {

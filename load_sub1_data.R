@@ -11,7 +11,7 @@ load_data=function(train_fns, test_fn, dat_dir="Drug_synergy_data/") {
   }
   train=train[train$QA==1,]
   
-  test=fread(test_fn)
+  test=fread(paste0(dat_dir,test_fn))
   setDF(test)
   
   allDrugs=union(train$COMPOUND_A,train$COMPOUND_B)

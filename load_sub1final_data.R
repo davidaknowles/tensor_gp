@@ -2,13 +2,9 @@ require(data.table)
 
 train=fread("../Drug_synergy_data/ch1_train_combination_and_monoTherapy.csv")
 setDF(train)
-
 train_lb=fread("../Drug_synergy_data/ch1_LB.csv")
 setDF(train_lb)
-
-
 train=rbind(train,train_lb)
-
 train=train[train$QA==1,]
 
 test=fread("../Drug_synergy_data/ch1_test_monoTherapy.csv")

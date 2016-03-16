@@ -19,7 +19,7 @@ sqDist=lapply(dist,function(g) g[cls,cls]^2)
 
 drugs=levels(train$COMPOUND_A)
 
-pathways=read.csv("DREAM CHALLENGE TABLE DRUGS-TARGETS LOUKIA.csv",row.names = 1,check.names = F)
+pathways=read.csv("processed_data/drug_targets.csv",row.names = 1,check.names = F)
 pathways=pathways[,colSums(pathways)>1]
 ldrugs=do.call(rbind,strsplit(rownames(pathways),"-"))[,2]
 sort(drugs[ !drugs %in% ldrugs])

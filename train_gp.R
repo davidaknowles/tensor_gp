@@ -65,9 +65,9 @@ if (run) {
   sm=stan_model("comb_therapy_models/gp_multitask_mkl.stan")
   reruns = foreach(i=1:10) %dopar% { 
     set.seed(i)
-    optimizing(sm, data=dat,verbose=T,as_vector=F) 
+    o=optimizing(sm, data=dat,verbose=T,as_vector=F) 
+    save(o, file=paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,".RData"))
   }
-  save(reruns, file=paste0("cached_results/sub1_part",sub_challenge,"_",setup,".RData"))
   cat("Done!")
   stop()
 } else {

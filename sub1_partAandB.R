@@ -1,6 +1,6 @@
 require(rstan)
 require(doMC)
-registerDoMC(10)
+
 
 run=as.logical(as.numeric(commandArgs(trailingOnly = T)[1]))
 
@@ -8,13 +8,16 @@ setup=commandArgs(trailingOnly = T)[2]
 
 sub_challenge=commandArgs(trailingOnly = T)[3]
 
+registerDoMC( as.numeric(commandArgs(trailingOnly = T)[4] ))
+
 source("load_cell_line_data.R")
 source("load_sub1_data.R")
 
 dat=switch(setup, 
   lb=load_data( "ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"), 
   lb2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),"ch1_LB.csv"), 
-  final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv")
+  final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
+  final2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch1_leaderBoard_monoTherapy.csv")
 )
 
 train=dat$train

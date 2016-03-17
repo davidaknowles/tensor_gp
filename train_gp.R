@@ -1,7 +1,6 @@
 require(rstan)
 require(doMC)
 
-
 run=as.logical(as.numeric(commandArgs(trailingOnly = T)[1]))
 
 setup=commandArgs(trailingOnly = T)[2]
@@ -11,13 +10,15 @@ sub_challenge=commandArgs(trailingOnly = T)[3]
 registerDoMC( as.numeric(commandArgs(trailingOnly = T)[4] ))
 
 source("load_cell_line_data.R")
-source("load_sub1_data.R")
+source("load_response_data.R")
 
 dat=switch(setup, 
   lb=load_data( "ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"), 
   lb2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),"ch1_LB.csv"), 
   final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
-  final2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch1_leaderBoard_monoTherapy.csv")
+  final2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
+  sub2=load( "ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),
+  sub2final=load( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch2_test_monoTherapy.csv"),
 )
 
 train=dat$train
@@ -48,7 +49,7 @@ graph_dist=graph_dist/median(graph_dist[upper.tri(graph_dist)])
 
 sqDist_dr=list( pathway=graph_dist^2 ) # sdm
 
-if (sub_challenge=="A") {
+if (sub_challenge=="A" || sub_challenge=="2") {
   co=read.table("processed_data/pca_imputed_mono.txt",header=T)
   mono_dist=as.matrix(dist(t(co)))
   mono_dist=mono_dist/median(mono_dist[upper.tri(mono_dist)])
@@ -120,4 +121,36 @@ write.csv(sub1conf,file="combination_priority.csv",row.names = F, quote=F)
 
 system(paste0("zip sub1",sub_challenge,".zip *.csv"))
 setwd("..")
+
+
+
+
+if (subchallenge=="sub2") {
+  rownames(a)=a$COMBINATION_ID
+  a[as.character(sub2$COMBINATION_ID),]
+  
+  sub2=data.frame(COMBINATION_ID=m$COMBINATION_ID, CELL_LINE=m$CELL_LINE, prediction=pnorm( o$par$ytest/sqrt(o$par$sigma_sq ) ) )
+  
+  sub2mat=dcast(sub2, COMBINATION_ID ~ CELL_LINE, value.var="prediction")
+  
+  rownames(sub2mat)=sub2mat$COMBINATION_ID
+  sub2mat$COMBINATION_ID=NULL
+  
+  dir.create("sub2")
+  setwd("sub2")
+  write.csv(sub2mat, "confidence_matrix.csv", quote=F)
+  
+  sub2bin =sub2mat>.9
+  class(sub2bin)="numeric"
+  write.csv(sub2bin, "synergy_matrix.csv", quote=F)
+  
+  sub1=data.frame(CELL_LINE=test$CELL_LINE, COMBINATION_ID=test$COMBINATION_ID, PREDICTION=o$par$ytest)
+  dir.create("sub1")
+  write.csv(sub1,file="sub1/prediction.csv",row.names = F, quote=F)
+  
+  system("zip sub2.zip *.csv")
+  setwd("..")
+  sub1conf=data.frame(COMBINATION_ID=a$COMBINATION_ID, CONFIDENCE=1-pnorm( -abs(a$mean) / sqrt(a$err) )*2 )
+  write.csv(sub1conf,file="sub1/combination_priority.csv",row.names = F, quote=F)
+}
 

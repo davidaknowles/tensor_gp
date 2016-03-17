@@ -1,5 +1,5 @@
 
-views=c("cnv", "gex", "mut", "methyl")
+views=c("cnv", "gex", "mut", "methyl", "tissue")
 dist=foreach(view=views) %do% {
   a=read.csv(paste0("processed_data/",view,"_dist.csv"),row.names=1,check.names=F)
   a=a/median(a[upper.tri(a)])

@@ -1,0 +1,4 @@
+*.RData
+*.rda
+.DS_Store
+.Rhistory

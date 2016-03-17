@@ -1,13 +1,13 @@
 require(rstan)
 require(doMC)
 
-run=as.logical(as.numeric(commandArgs(trailingOnly = T)[1]))
+args=commandArgs(trailingOnly = T)
 
-setup=commandArgs(trailingOnly = T)[2]
-
-sub_challenge=commandArgs(trailingOnly = T)[3]
-
-registerDoMC( as.numeric(commandArgs(trailingOnly = T)[4] ))
+run=as.logical(as.numeric(args[1])) # 0 or 1, 1=run the model, 0=just load cached results
+setup=args[2] # lb or final, or sub2
+sub_challenge=args[3] # A, B or 2
+registerDoMC( as.numeric(args[4] )) # number of cores
+use_tissue=as.logical(as.numeric(args[5])) # 0/1, use tissue similarity? 
 
 source("load_cell_line_data.R")
 source("load_response_data.R")
@@ -25,6 +25,9 @@ train=dat$train
 test=dat$test
 
 cls=levels(train$CELL_LINE)
+
+if (!use_tissue)
+  dist=dist[ names(dist) != "tissue" ]
 
 if (sub_challenge=="B") 
   dist=dist[c("cnv","mut")]

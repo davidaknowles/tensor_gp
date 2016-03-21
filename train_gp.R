@@ -3,18 +3,21 @@ require(doMC)
 
 if (!interactive()) {
     args=commandArgs(trailingOnly = T)
-    if (length(args)<5)
-        stop("Usage is: Rscript train_gp.R <run> <setup> <sub> <cores> <usetissue>\n where \n run: whether to train the model(s) or analyze the results. \n setup: lb, lb2, final, final2, sub2 or sub2final (see code) \n sub: A, B or 2. \n cores: number of cores to use. \n usetissue: 0/1")
+    if (length(args)<6)
+        stop("Usage is: Rscript train_gp.R <run> <setup> <sub> <cores> <usetissue> <max_its>\n where \n run: whether to train the model(s) or analyze the results. \n setup: lb, lb2, final, final2, sub2 or sub2final (see code) \n sub: A, B or 2. \n cores: number of cores to use. \n usetissue: 0/1")
     run=as.logical(as.numeric(args[1])) # 0 or 1, 1=run the model, 0=just load cached results
     setup=args[2] # lb or final, or sub2
     sub_challenge=args[3] # A, B or 2
-    registerDoMC( as.numeric(args[4] )) # number of cores
+    cores=as.numeric(args[4] )
+    if (cores>1) registerDoMC(cores) # number of cores
     use_tissue=as.logical(as.numeric(args[5])) # 0/1, use tissue similarity? 
+    iterations=as.numeric(args[6])
 } else {
-    run=F
-    setup="sub2final"
-    sub_challenge="2"
+    run=T
+    setup="lb"
+    sub_challenge="A"
     use_tissue=T
+    iterations=10
 }
 
 source("load_cell_line_data.R")
@@ -75,18 +78,25 @@ if (run) {
 
   foreach(i=1:10) %dopar% {
       
-    resfile=paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,".RData")
+    resfile=paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,"_iter",iterations,".RData")
     if (file.exists(resfile)) return(NULL)
     set.seed(i)
-    o=optimizing(sm, data=dat,verbose=T,as_vector=F) 
+    
+    init='random'
+    if (sub_challenge=="A") {
+      load("cached_results/subA_lb2_tissue1_seed1.RData")
+      init=o$par[1:8]
+    }
+    
+    st=system.time({ o=optimizing(sm, data=dat, verbose=T, init=init, as_vector=F, iter=iterations) })[1]
+    attr(o,"time")=st
     save(o, file=resfile)
-      
   }
   cat("Done!")
   stop()
 } else {
   reruns = foreach(i=1:10) %dopar% { 
-    load(paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,".RData"))
+    load(paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,"_iter",iterations,".RData"))
     o
   }
 }

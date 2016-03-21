@@ -18,7 +18,10 @@ scores=foreach(setup=c("lb","lb2"), .combine = rbind ) %do% {
     } )
 }
 
-pdf("more_data.pdf")
+pdf("more_data.pdf", width=4, height = 4)
 ggplot( scores, aes(setup, score) ) + geom_boxplot( outlier.shape = "none" ) + geom_point( size=3, alpha=.3 ) + theme_bw( base_size = 14 )
 dev.off()
 
+load("cached_results/subA_lb2_tissue1_seed1.RData")
+
+ggplot(data.frame(x=names(dist), y=sqrt(o$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(o$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") + ylim(0,2.3)

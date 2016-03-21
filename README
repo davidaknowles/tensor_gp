@@ -6,7 +6,5 @@ Required R packages: rstan, data.table, dplyr, doMC (or at least foreach).
 Key files: 
   - molecular_data.R processes the raw cell line data and produces distance matrices. It addtionally performs imputation for GE for two cell lines from CCLE and for methylation. 
   - mono_pca_all.R performs a nuclear-norm regularized PCA on the monotherapy data
-  - sub1_partAandB.R This is run to produce results for subchallenge 1. Part A is run with 
-  Rscript sub1_partAandB.R A
-and part B with
-  Rscript sub1_partAandB.R B
+  - train_gp.R This is run to produce results for all challenge tasks. e.g. part A is run with 
+  Rscript train_gp.R 1 final2 A #cores 1

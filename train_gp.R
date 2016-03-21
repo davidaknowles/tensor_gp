@@ -3,6 +3,8 @@ require(doMC)
 
 if (!interactive()) {
     args=commandArgs(trailingOnly = T)
+    if (length(args)<5)
+        stop("Usage is: Rscript train_gp.R <run> <setup> <sub> <cores> <usetissue>\n where \n run: whether to train the model(s) or analyze the results. \n setup: lb, lb2, final, final2, sub2 or sub2final (see code) \n sub: A, B or 2. \n cores: number of cores to use. \n usetissue: 0/1")
     run=as.logical(as.numeric(args[1])) # 0 or 1, 1=run the model, 0=just load cached results
     setup=args[2] # lb or final, or sub2
     sub_challenge=args[3] # A, B or 2
@@ -14,16 +16,17 @@ if (!interactive()) {
     sub_challenge="2"
     use_tissue=T
 }
+
 source("load_cell_line_data.R")
 source("load_response_data.R")
 
 dat=switch(setup, 
-  lb=load_data( "ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"), 
-  lb2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),"ch1_LB.csv"), 
-  final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
-  final2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
-  sub2=load_data( "ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),
-  sub2final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch2_test_monoTherapy.csv"),
+  lb=load_data( "ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"), # original leaderboard
+  lb2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),"ch1_LB.csv"), # leaderboard also using training from Challenge 2
+  final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"), #  final
+  final2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"), # final using Ch 2 data in addition
+  sub2=load_data( "ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"), # Challenge 2 leaderboard
+  sub2final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch2_test_monoTherapy.csv"), # Challenge 2 final
 )
 
 train=dat$train

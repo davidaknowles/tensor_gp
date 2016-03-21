@@ -1,14 +1,19 @@
 require(rstan)
 require(doMC)
 
-args=commandArgs(trailingOnly = T)
-
-run=as.logical(as.numeric(args[1])) # 0 or 1, 1=run the model, 0=just load cached results
-setup=args[2] # lb or final, or sub2
-sub_challenge=args[3] # A, B or 2
-registerDoMC( as.numeric(args[4] )) # number of cores
-use_tissue=as.logical(as.numeric(args[5])) # 0/1, use tissue similarity? 
-
+if (!interactive()) {
+    args=commandArgs(trailingOnly = T)
+    run=as.logical(as.numeric(args[1])) # 0 or 1, 1=run the model, 0=just load cached results
+    setup=args[2] # lb or final, or sub2
+    sub_challenge=args[3] # A, B or 2
+    registerDoMC( as.numeric(args[4] )) # number of cores
+    use_tissue=as.logical(as.numeric(args[5])) # 0/1, use tissue similarity? 
+} else {
+    run=F
+    setup="sub2final"
+    sub_challenge="2"
+    use_tissue=T
+}
 source("load_cell_line_data.R")
 source("load_response_data.R")
 
@@ -17,8 +22,8 @@ dat=switch(setup,
   lb2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),"ch1_LB.csv"), 
   final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
   final2=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch1_leaderBoard_monoTherapy.csv"),
-  sub2=load( "ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),
-  sub2final=load( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv"),"ch2_test_monoTherapy.csv"),
+  sub2=load_data( "ch1_train_combination_and_monoTherapy.csv","ch2_LB.csv"),
+  sub2final=load_data( c("ch1_train_combination_and_monoTherapy.csv","ch1_LB.csv","ch2_LB.csv"),"ch2_test_monoTherapy.csv"),
 )
 
 train=dat$train
@@ -30,7 +35,7 @@ if (!use_tissue)
   dist=dist[ names(dist) != "tissue" ]
 
 if (sub_challenge=="B") 
-  dist=dist[c("cnv","mut")]
+  dist=dist[ ! (names(dist) %in% c("gex","methyl") ) ]
 
 sqDist=lapply(dist,function(g) g[cls,cls]^2)
 
@@ -62,30 +67,48 @@ if (sub_challenge=="A" || sub_challenge=="2") {
 dat=list(N=nrow(train), Ntest=nrow(test), y=train$SYNERGY_SCORE, C=length(cls), D=length(levels(train$COMPOUND_A)), P=length(sqDist), sqDist_cl=sqDist, P_dr=length(sqDist_dr), sqDist_dr=sqDist_dr, cellLines=as.numeric(train$CELL_LINE), cellLinesTest=as.numeric(test$CELL_LINE), drugA=as.numeric(train$COMPOUND_A), drugB=as.numeric(train$COMPOUND_B), drugATest=as.numeric(test$COMPOUND_A), drugBTest=as.numeric(test$COMPOUND_B) )
 
 if (run) {
-  sm=stan_model("comb_therapy_models/gp_multitask_mkl.stan")
-  reruns = foreach(i=1:10) %dopar% { 
+
+    sm=stan_model("comb_therapy_models/gp_multitask_mkl.stan")
+
+  foreach(i=1:10) %dopar% {
+      
+    resfile=paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,".RData")
+    if (file.exists(resfile)) return(NULL)
     set.seed(i)
     o=optimizing(sm, data=dat,verbose=T,as_vector=F) 
-    save(o, file=paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,".RData"))
+    save(o, file=resfile)
+      
   }
   cat("Done!")
   stop()
 } else {
-  load(paste0("cached_results/sub1_part",sub_challenge,"_final.RData"))
+  reruns = foreach(i=1:10) %dopar% { 
+    load(paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,".RData"))
+    o
+  }
 }
 
 likelihoods=foreach(r=reruns, .combine = c) %do% r$value
 barplot(-likelihoods)
 
+source("utils.R")
+scores_df=foreach(i=seq_along(reruns), .combine = rbind) %do% { reruns[[i]]$score=get_score(reruns[[i]]$par$ytest, test)
+                                                         c( reruns[[i]]$score, attr(reruns[[i]]$score, "se")) }
+scores=scores_df[,1]
+scores[is.na(scores)]=0
+
 o=reruns[[ which.max(likelihoods) ]]
+y=c(with_tissue, o_score)
+se=c(attr(with_tissue,"se"), attr(o_score,"se"))
+qplot( c("with tissue","without"), y, geom="blank" ) + geom_bar(stat="identity", position="dodge") + theme_bw(base_size = 16) + xlab("") + ylab("Score") + geom_errorbar( aes(ymax=y+se, ymin=y-se), width=.6 )
 
 # o$value
 require(gridExtra)
-do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=names(sqDist), y=sqrt(r$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
+do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=names(sqDist)[1:4], y=sqrt(r$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("L: ",format(r$value, digits = 3)," S:",r$score)) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
 
 ggplot(data.frame(x=names(sqDist), y=sqrt(o$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") + ylim(0,2.3)
 
-do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(o$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
+do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(r$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("L: ",format(r$value, digits = 3)," S:",r$score))+ theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
 
 ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(o$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") + ylim(0,2.3)
 
@@ -110,6 +133,13 @@ a=a[order(a$cv),]
 b=a[c(1:20,nrow(a)-20+(1:20)),]
 b$COMBINATION_ID=factor(b$COMBINATION_ID,b$COMBINATION_ID)
 ggplot(b, aes(x=COMBINATION_ID, y=cv) ) + geom_bar(stat = "identity")+coord_flip() + scale_y_log10()
+
+ggplot(data.frame(likelihoods, scores), aes(likelihoods, scores)) +geom_point(size=3) + theme_bw(base_size = 16) + ylab("Score") + xlab("Log likelihood")
+
+o_score=get_score(o$par$ytest, test)
+df=attr(o_score, "df")
+dfsub=df[df$n>2,]
+ggplot(dfsub, aes(as.factor(n), pearson)) + geom_boxplot(outlier.shape = NA) + xlab("# cell lines in combination") + ylab("Pearson correlation") + geom_point(position = position_jitter(width = .5), size=3, alpha=.5) + theme_bw(base_size = 15)
 
 str(o)
 sub1=data.frame(CELL_LINE=test$CELL_LINE, COMBINATION_ID=test$COMBINATION_ID, PREDICTION=o$par$ytest)

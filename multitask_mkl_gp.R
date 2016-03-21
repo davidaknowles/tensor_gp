@@ -83,7 +83,7 @@ weighting=exp(likelihoods - log_sum_exp(likelihoods))
 preds=foreach(o=reruns, .combine = cbind) %do% o$par$ytest
 
 weighted_pred=as.numeric(preds %*% weighting)
-get_score(weighted_pred)
+get_score(weighted_pred, test)
 
 scores[which.max(likelihoods)]
 

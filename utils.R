@@ -35,9 +35,19 @@ unscale=function(y,ys) {
 }
 
 require(dplyr)
+
+cor_se=function(x,y) {
+  if (length(x) <= 2) return(1)
+  ct=cor.test(x,y)
+  ct$estimate / ct$statistic # se
+}
+
 get_score=function(pred, test) {
   test$my_pred=pred
-  df=test %>% group_by(COMBINATION_ID) %>% summarise(pearson=cor(SYNERGY_SCORE, my_pred), n=length(SYNERGY_SCORE)) %>% as.data.frame
+  df=test %>% group_by(COMBINATION_ID) %>% summarise(pearson=cor(SYNERGY_SCORE, my_pred), corv=cor_se(SYNERGY_SCORE,my_pred)^2, n=length(SYNERGY_SCORE)) %>% as.data.frame
   df$w=sqrt(df$n-1) * (df$n > 2)
-  sum( df$w * df$pearson ) / sum(df$w)
+  score=sum( df$w * df$pearson ) / sum(df$w)
+  attr(score,"df")=df
+  attr(score,"se")=sqrt( sum( df$w^2 * df$corv ) / sum(df$w)^2 )
+  score
 }

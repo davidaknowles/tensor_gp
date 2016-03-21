@@ -14,7 +14,7 @@ load_data=function(train_fns, test_fn, dat_dir="Drug_synergy_data/") {
   test=fread(paste0(dat_dir,test_fn))
   setDF(test)
   
-  allDrugs=union(train$COMPOUND_A,train$COMPOUND_B)
+  allDrugs=Reduce(union, list(train$COMPOUND_A,train$COMPOUND_B,test$COMPOUND_A,test$COMPOUND_B))
   cellLines=union(train$CELL_LINE,test$CELL_LINE)
   cellDrugFactor=function(g) {
     g$COMPOUND_A=factor(g$COMPOUND_A, allDrugs)

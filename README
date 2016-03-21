@@ -3,6 +3,10 @@ https://www.synapse.org/#!Synapse:syn4231880/wiki/235645
   
 Required R packages: rstan, data.table, dplyr, doMC (or at least foreach), irlba (if you want to run the convex PCA component).  
 
+Data required:
+     - Both the Drug_synergy_data and Sanger_molecular_data directories must be in the main directory. ch1_LB.csv and ch2_LB.csv should be in the synergy data folder also. 
+     - CCLE expression data file: CCLE_Expression_Entrez_2012-09-29.gct available from http://www.broadinstitute.org/ccle/data/browseData?conversationPropagation=begin
+
 Key files: 
   - molecular_data.R processes the raw cell line data and produces distance matrices. It addtionally performs imputation for GE for two cell lines from CCLE and for methylation. 
   - mono_pca_all.R performs a nuclear-norm regularized PCA on the monotherapy data

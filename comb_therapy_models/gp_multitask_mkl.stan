@@ -82,13 +82,13 @@ generated quantities {
   matrix[N,N] Sigma_no_noise; 
   Sigma_no_noise <- getSigma( eta_sq_cl, rho_sq_cl, sigma_sq_cl, sqDist_cl, eta_sq_dr, rho_sq_dr, sigma_sq_dr, sqDist_dr, 0.0, cellLines, drugA, drugB );
   {
-    matrix[Ntest,Ntest] Omega;
+    # matrix[Ntest,Ntest] Omega;
     matrix[N,Ntest] kappa;
     matrix[Ntest,N] K_transpose_div_Sigma;
     matrix[N,N] Sigma; 
 
     Sigma <- getSigma( eta_sq_cl, rho_sq_cl, sigma_sq_cl, sqDist_cl, eta_sq_dr, rho_sq_dr, sigma_sq_dr, sqDist_dr, sigma_sq, cellLines, drugA, drugB );
-    Omega <- getSigma( eta_sq_cl, rho_sq_cl, sigma_sq_cl, sqDist_cl, eta_sq_dr, rho_sq_dr, sigma_sq_dr, sqDist_dr, sigma_sq, cellLinesTest, drugATest, drugBTest);
+    # Omega <- getSigma( eta_sq_cl, rho_sq_cl, sigma_sq_cl, sqDist_cl, eta_sq_dr, rho_sq_dr, sigma_sq_dr, sqDist_dr, sigma_sq, cellLinesTest, drugATest, drugBTest);
     for (i in 1:N)
       for (j in 1:Ntest) {
         real temp[P];

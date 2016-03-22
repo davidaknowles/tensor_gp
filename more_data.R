@@ -24,4 +24,6 @@ dev.off()
 
 load("cached_results/subA_lb2_tissue1_seed1.RData")
 
+pdf("importance.pdf", height=5, width=5)
 ggplot(data.frame(x=names(dist), y=sqrt(o$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(o$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") + ylim(0,2.3)
+dev.off()

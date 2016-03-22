@@ -12,13 +12,15 @@ b=fread("Sanger_molecular_data/cell_info.csv")
 setDF(b)
 rownames(b)=b$Sanger.Name
 
+dir.create("processed_data")
+
 tissue_dist=1-outer(b$Disease.Area, b$Disease.Area, FUN = "==")
 dimnames(tissue_dist)=list( rownames(b), rownames(b) )
 write.csv( tissue_dist, file="processed_data/tissue_dist.csv", quote=F )
 
 setdiff( b$Sanger.Name, colnames(a)  ) # missing cell lines
 
-ccle=fread("/Users/davidknowles/Downloads/CCLE_Expression_Entrez_2012-09-29.gct")
+ccle=fread("CCLE_Expression_Entrez_2012-09-29.gct")
 setDF(ccle)
 gn=ccle$Description
 ccle$Name=NULL

@@ -81,26 +81,6 @@ if (run) {
     resfile=paste0("cached_results/sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed",i,"_iter",iterations,".RData")
     if (file.exists(resfile)) return(NULL)
     set.seed(i)
-    
-    init='random'
-    if (sub_challenge=="A") {
-      load("cached_results/subA_final2_tissue1_seed1_iter30.RData")
-      init=o$par[1:8]
-      rm("o")
-      gc()
-    } else if (sub_challenge=="B") {
-      #load("cached_results/subB_final2_tissue0_seed5.RData")
-      #init=o$par[1:8]
-      #init$eta_sq_cl=c(init$eta_sq_cl, 1)
-      #init$inv_rho_sq_cl=c(init$inv_rho_sq_cl, 1)
-      #rm("o")
-      #gc()
-      load("cached_results/subB_final2_tissue1_seed1_iter30.RData_23672")
-      init=o$par[1:8]
-      rm("o")
-      gc()
-    }
-    
     st=system.time({ o=optimizing(sm, data=dat, verbose=T, init=init, as_vector=F, iter=iterations) })[1]
     attr(o,"time")=st
     save(o, file=resfile)
@@ -116,39 +96,28 @@ if (run) {
   }
 }
 
-fn=list.files("cached_results", glob2rx(paste0("sub",sub_challenge,"_",setup,"_tissue",as.numeric(use_tissue),"_seed*_iter",iterations,".RData*")))
-reruns = foreach(i=fn) %dopar% { 
-  load(paste0("cached_results/",i))
-  o
-}
-
-
 likelihoods=foreach(r=reruns, .combine = c) %do% r$value
 plot(likelihoods)
-
-source("utils.R")
-scores_df=foreach(i=seq_along(reruns), .combine = rbind) %do% { reruns[[i]]$score=get_score(reruns[[i]]$par$ytest, test)
-                                                         c( reruns[[i]]$score, attr(reruns[[i]]$score, "se")) }
-scores=scores_df[,1]
-scores[is.na(scores)]=0
-
-
 o=reruns[[ which.max(likelihoods) ]]
-load("cached_results/subA_final2_tissue1_seed1_iter30.RData")
 
-# y=c(with_tissue, o_score)
-# se=c(attr(with_tissue,"se"), attr(o_score,"se"))
-# qplot( c("with tissue","without"), y, geom="blank" ) + geom_bar(stat="identity", position="dodge") + theme_bw(base_size = 16) + xlab("") + ylab("Score") + geom_errorbar( aes(ymax=y+se, ymin=y-se), width=.6 )
+if (0) { # scoring, only for leaderboard, not final run of course
+  source("utils.R")
+  scores_df=foreach(i=seq_along(reruns), .combine = rbind) %do% { reruns[[i]]$score=get_score(reruns[[i]]$par$ytest, test)
+                                                           c( reruns[[i]]$score, attr(reruns[[i]]$score, "se")) }
+  scores=scores_df[,1]
+  scores[is.na(scores)]=0
+}
 
-# o$value
-require(gridExtra)
-do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=names(sqDist), y=sqrt(r$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("L: ",format(r$value, digits = 3)," S:",r$score)) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
-
-ggplot(data.frame(x=names(sqDist), y=sqrt(o$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + theme_bw(base_size=16) + ylab("importance") + xlab("") 
-
-do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(r$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("L: ",format(r$value, digits = 3)," S:",r$score))+ theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
-
-ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(o$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") 
+if (0) { # plot importance of different distance matrices for each run
+  require(gridExtra)
+  do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=names(sqDist), y=sqrt(r$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("L: ",format(r$value, digits = 3)," S:",r$score)) + theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
+  
+  ggplot(data.frame(x=names(sqDist), y=sqrt(o$par$eta_sq_cl)), aes(x,y)) + geom_bar(stat="identity") + theme_bw(base_size=16) + ylab("importance") + xlab("") 
+  
+  do.call(grid.arrange , c(foreach(r=reruns[order(likelihoods)]) %do% { ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(r$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("L: ",format(r$value, digits = 3)," S:",r$score))+ theme_bw(base_size=14) + ylab("importance") + xlab("") + ylim(0,2.3) } , nrow=2))
+  
+  ggplot(data.frame(x=c("pathways","mono_therapy"), y=sqrt(o$par$eta_sq_dr)), aes(x,y)) + geom_bar(stat="identity") + ggtitle(paste0("Likelihood: ",format(r$value, digits = 3))) + theme_bw(base_size=16) + ylab("importance") + xlab("") 
+}
 
 N=nrow(train)
 SN=o$par$Sigma_no_noise

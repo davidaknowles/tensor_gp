@@ -10,5 +10,13 @@ Data required:
 Key files: 
   - molecular_data.R processes the raw cell line data and produces distance matrices. It addtionally performs imputation for GE for two cell lines from CCLE and for methylation. 
   - mono_pca_all.R performs a nuclear-norm regularized PCA on the monotherapy data
-  - train_gp.R This is run to produce results for all challenge tasks. e.g. part A is run with 
-  Rscript train_gp.R 1 final2 A #cores 1
+  - train_gp.R This is run to produce results for all challenge tasks. 
+   Rscript train_gp.R <run> <setup> <sub> <cores> <usetissue> <max_its>
+  
+With the full training data (we use all of Ch 1 and Ch 2 for both) the memory consumption is pretty high (like 40Gb per thread) so I only run two cores on the 120Gb machines we have. So Ch 1A was trained using: 
+train_gp.R 1 final2 A 2 1 30
+and predictions are made using 
+train_gp.R 0 final2 A 1 1 30
+Similary for Ch 1B (just change A -> B). 
+
+For Ch 2, the training from Ch1 A can be used (pick the top likelihood seed), and then run sub2_predict.R. In principle this could be done using a Stan run, but in practice it's faster to do it manually. 

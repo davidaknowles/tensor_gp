@@ -181,9 +181,10 @@ if (0) { # just some plotting
   ggplot(dfsub, aes(as.factor(n), pearson)) + geom_boxplot(outlier.shape = NA) + xlab("# cell lines in combination") + ylab("Pearson correlation") + geom_point(position = position_jitter(width = .5), size=3, alpha=.5) + theme_bw(base_size = 15)
 }
 
-predictions=data.frame(CELL_LINE=test$CELL_LINE, COMBINATION_ID=test$COMBINATION_ID, PREDICTION=o$par$ytest)
-
 if (sub_challenge %in% c("A","B")) {
+
+  predictions=data.frame(CELL_LINE=test$CELL_LINE, COMBINATION_ID=test$COMBINATION_ID, PREDICTION=o$par$ytest)
+  
   resdir=paste0("sub1_part",sub_challenge,"_",setup)
   dir.create(resdir)
   setwd(resdir)
@@ -198,53 +199,3 @@ if (sub_challenge %in% c("A","B")) {
   system(paste0("zip sub1",sub_challenge,".zip *.csv"))
   setwd("..")
 }
-
-if (subchallenge=="2") {
-  #class(training_errors)="data.frame"
-  #rownames(training_errors)=as.character(training_errors$COMBINATION_ID)
-  #m=training_errors[as.character(predictions$COMBINATION_ID),]
-  
-  test_combs=unique(test$COMBINATION_ID)
-  topred=as.data.frame(matrix(NA, length(test_combs), length(cls)))
-  colnames(topred)=cls
-  topred$COMBINATION_ID=test_combs
-  require(reshape2)
-  m=melt(topred, id.vars="COMBINATION_ID")
-  test_compounds=do.call(rbind,strsplit(m$COMBINATION_ID,".",fixed = T))
-  m$COMPOUND_A=factor(test_compounds[,1],drugs)
-  m$COMPOUND_B=factor(test_compounds[,2],drugs)
-  colnames(m)[2]="CELL_LINE"
-  
-  dat$Ntest=nrow(m)
-  dat$cellLinesTest=as.numeric(m$CELL_LINE)
-  dat$drugATest=as.numeric(m$COMPOUND_A)
-  dat$drugBTest=as.numeric(m$COMPOUND_B)
-  
-  o_mat=optimizing(sm, data=dat, verbose=T, init=o_init$par, as_vector=F, iter=1)
-  
-  sub2=data.frame(COMBINATION_ID=test$COMBINATION_ID, CELL_LINE=test$CELL_LINE, prediction=pnorm( o_mat$par$ytest/sqrt(o_mat$par$sigma_sq ) ) )
-  
-  require(reshape2)
-  sub2mat=dcast(sub2, COMBINATION_ID ~ CELL_LINE, value.var="prediction")
-  
-  rownames(sub2mat)=sub2mat$COMBINATION_ID
-  sub2mat$COMBINATION_ID=NULL
-  
-  dir.create("sub2")
-  setwd("sub2")
-  write.csv(sub2mat, "confidence_matrix.csv", quote=F)
-  
-  sub2bin =sub2mat>.9
-  class(sub2bin)="numeric"
-  write.csv(sub2bin, "synergy_matrix.csv", quote=F)
-  
-  sub1=data.frame(CELL_LINE=test$CELL_LINE, COMBINATION_ID=test$COMBINATION_ID, PREDICTION=o$par$ytest)
-  dir.create("sub1")
-  write.csv(sub1,file="sub1/prediction.csv",row.names = F, quote=F)
-  
-  system("zip sub2.zip *.csv")
-  setwd("..")
-  sub1conf=data.frame(COMBINATION_ID=a$COMBINATION_ID, CONFIDENCE=1-pnorm( -abs(a$mean) / sqrt(a$err) )*2 )
-  write.csv(sub1conf,file="sub1/combination_priority.csv",row.names = F, quote=F)
-}
-

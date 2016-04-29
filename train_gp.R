@@ -14,8 +14,8 @@ if (!interactive()) {
     iterations=as.numeric(args[6])
 } else {
     run=T
-    setup="sub2final"
-    sub_challenge="2"
+    setup="final2"
+    sub_challenge="A"
     use_tissue=T
     iterations=30
 }

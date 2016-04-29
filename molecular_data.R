@@ -80,7 +80,7 @@ dimnames(d)=list(tissues,tissues)
 # TODO: impute or find missing GE
 
 #------------------ MUTATIONS ---------------------
-a=fread("Sanger_molecular_data/mutations.csv")
+a=fread("~/Box Sync/astrazeneca_dream/code/Sanger_molecular_data/mutations.csv")
 setDF(a)
 
 pdf("mut_counts.pdf",height=12,width=8)
@@ -91,15 +91,22 @@ a$cell_line_name=factor(a$cell_line_name)
 a$Gene.name=factor(a$Gene.name)
 require(Matrix)
 sm=sparseMatrix(i=as.numeric(a$cell_line_name), j=as.numeric(a$Gene.name), x=rep(1,nrow(a)), dimnames = list(levels(a$cell_line_name),levels(a$Gene.name)))
-d=as.matrix(dist(sm))
-
-smbin=sm>0
+#d=as.matrix(dist(sm))
+smbin=t(as.matrix(sm))>0
+d=as.matrix(dist(t(smbin)))
 require(prabclus)
-jd=1-jaccard(smbin)
+jd=jaccard(smbin)
 dimnames(jd)=list(rownames(sm),rownames(sm))
 write.csv( as.matrix(jd),file="mut_dist.csv", quote=F)
 dimnames(jd)=list(tissues,tissues)
 pdf("mut_hclust_jacc.pdf",width=15,height=8); plot( hclust( as.dist( jd ) ) ); dev.off(); 
+
+#qplot( d[upper.tri(jd)], jd[upper.tri(jd)], col=same_tissue[upper.tri(jd)], xlab="Euclidean", ylab="Jaccard", alpha=.5) + theme_bw()
+
+#qplot( d[upper.tri(jd)], col=same_tissue[upper.tri(jd)], geom="blank" ) + geom_density(position = "identity")
+#qplot( jd[upper.tri(jd)], col=same_tissue[upper.tri(jd)], geom="blank" ) + geom_density(position = "identity")
+
+#jd2=d^2 / (d^2 + xy)
 
 #tissues=b[as.character(levels(a$cell_line_name)),"CCLE.Name"]
 #dimnames(d)=list(tissues,tissues)

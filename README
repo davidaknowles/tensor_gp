@@ -1,5 +1,8 @@
 Code for Tensor Gaussian Process Regression for predicting drug combination synergy, developed for the AstraZeneca-Sanger Drug Combination Prediction DREAM Challenge 2015:
 https://www.synapse.org/#!Synapse:syn4231880/wiki/235645
+
+More details of the method are available here:
+https://www.synapse.org/#!Synapse:syn5586109/wiki/394920
   
 Required R packages: rstan, data.table, dplyr, doMC (or at least foreach), irlba (if you want to run the convex PCA component).  
 
